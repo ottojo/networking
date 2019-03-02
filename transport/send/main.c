@@ -4,6 +4,7 @@
 #include <stdio.h>
 #include <arpa/inet.h>
 #include <stdbool.h>
+#include <time.h>
 
 #define PROTOCOL_ID 253
 
@@ -14,18 +15,21 @@ int main(int argc, char **argv) {
         return 0;
     }
 
+    // Use IPv4
     sa_family_t addrFamily = AF_INET;
 
+    // Open a raw socket with our own protocol number
     int raw_socket = socket(AF_INET, SOCK_RAW, PROTOCOL_ID);
     if (raw_socket == -1) {
         perror("Error opening raw socket");
         return 1;
     }
 
-    unsigned char testData[] = {1, 2, 3, 4, 5, 6, 7, 8};
+    struct sockaddr_in destinationSocketAddr = {0};
+    destinationSocketAddr.sin_family = addrFamily;
 
-    struct sockaddr destAddr;
-    switch (inet_pton(addrFamily, argv[1], &destAddr)) {
+    // Parse the destination IP from the command line parameter
+    switch (inet_pton(addrFamily, argv[1], &destinationSocketAddr.sin_addr)) {
         case 0:
             printf("Address not valid.\n");
             return 1;
@@ -37,16 +41,20 @@ int main(int argc, char **argv) {
             break;
     }
 
-    destAddr.sa_family = addrFamily;
 
     while (true) {
-        ssize_t nbytessent = sendto(raw_socket, &testData, sizeof(testData), 0, &destAddr, sizeof(destAddr));
-        if (nbytessent == -1) {
+        // Send the current time once per second
+
+        time_t currentTime = time(NULL);
+
+        ssize_t bytesSent = sendto(raw_socket, &currentTime, sizeof(currentTime), 0,
+                                   (const struct sockaddr *) &destinationSocketAddr, sizeof(destinationSocketAddr));
+        if (bytesSent == -1) {
             perror("Error sending data");
             return 1;
         }
 
-        printf("Wrote %ld bytes to socket\n", nbytessent);
+        printf("Sent %ld bytes to %s\n", bytesSent, inet_ntoa(destinationSocketAddr.sin_addr));
         sleep(1);
     }
 }
