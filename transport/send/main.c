@@ -5,6 +5,7 @@
 #include <arpa/inet.h>
 #include <stdbool.h>
 #include <time.h>
+#include <memory.h>
 
 #define PROTOCOL_ID 253
 
@@ -43,11 +44,11 @@ int main(int argc, char **argv) {
 
 
     while (true) {
-        // Send the current time once per second
+        // Send hello world
 
-        time_t currentTime = time(NULL);
+        char *message = "Hello World";
 
-        ssize_t bytesSent = sendto(raw_socket, &currentTime, sizeof(currentTime), 0,
+        ssize_t bytesSent = sendto(raw_socket, message, strlen(message), 0,
                                    (const struct sockaddr *) &destinationSocketAddr, sizeof(destinationSocketAddr));
         if (bytesSent == -1) {
             perror("Error sending data");
